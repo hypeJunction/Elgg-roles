@@ -9,7 +9,6 @@
  * @copyright Arck Interactive, LLC 2012
  * @link http://www.arckinteractive.com/
  */
-
 /**
  *
  * Default role constants definitions
@@ -46,20 +45,22 @@ function roles_init($event, $type, $object) {
 
 	// Due to dynamically created (or extended) menus, we need to catch all 'register' hooks _after_ other modules added/removed their menu items
 	elgg_register_plugin_hook_handler('register', 'all', 'roles_menus_permissions', 9999);
-	
+
 	// Set up roles based hooks and event listener, after all plugin is initialized
 	elgg_register_event_handler('ready', 'system', 'roles_hooks_permissions');
 	elgg_register_event_handler('ready', 'system', 'roles_events_permissions');
 
 	// Check for role configuration updates
-	if (elgg_is_admin_logged_in()) {	// @TODO think through if this should rather be a role-based permission
-		run_function_once('roles_update_100_to_101');
-		elgg_register_event_handler('ready', 'system', 'roles_check_update');
-	}
-
+	//if (elgg_is_admin_logged_in()) {	// @TODO think through if this should rather be a role-based permission
+	$ia = elgg_set_ignore_access(true);
+	run_function_once('roles_update_100_to_101');
+	elgg_register_event_handler('ready', 'system', 'roles_check_update');
+	elgg_set_ignore_access($ia);
+	//}
 	// Set up roles based view management
 	elgg_register_event_handler('ready', 'system', 'roles_register_views');
-
+	// Bypass access levels for 'admin' actions
+	elgg_register_event_handler('ready', 'system', 'roles_bypass_action_access_control');
 }
 
 /**
@@ -77,7 +78,7 @@ function roles_init($event, $type, $object) {
  * @param string $event Equals 'ready'
  * @param string $event_type Equals 'system'
  * @param mixed $object Not in use for this specific listener
-*/
+ */
 function roles_register_views($event, $type, $object) {
 	$role = roles_get_role();
 	if (elgg_instanceof($role, 'object', 'role')) {
@@ -94,6 +95,7 @@ function roles_register_views($event, $type, $object) {
 						$priority = isset($params['priority']) ? $params['priority'] : 501;
 						$viewtype = isset($params['viewtype']) ? $params['viewtype'] : '';
 						elgg_extend_view($view, $view_extension, $priority, $viewtype);
+
 						break;
 					case 'replace':
 						$params = $perm_details['view_replacement'];
@@ -137,7 +139,6 @@ function roles_views_permissions($hook_name, $type, $return_value, $params) {
 	}
 }
 
-
 /**
  *
  * Processes action permissions from the role configuration array. This is called upon each action execution.
@@ -158,11 +159,11 @@ function roles_actions_permissions($hook, $type, $return_value, $params) {
 				if (roles_path_match(roles_replace_dynamic_paths($action), $type)) {
 					switch ($perm_details['rule']) {
 						case 'deny':
-							register_error(elgg_echo('roles:action:denied'));
-							return false;
+							$deny = true;
 							break;
 						case 'allow':
 						default:
+							$deny = false;
 							break;
 					}
 				}
@@ -170,7 +171,6 @@ function roles_actions_permissions($hook, $type, $return_value, $params) {
 		}
 	}
 }
-
 
 /**
  *
@@ -181,11 +181,10 @@ function roles_actions_permissions($hook, $type, $return_value, $params) {
  * @param boolean $return_value
  * @param mixed $params An associative array of parameters provided by the hook trigger
  */
-
 function roles_menus_permissions($hook, $type, $return_value, $params) {
 
 	$updated_menu = $return_value;
-	
+
 	// Ignore all triggered hooks except for 'menu:menu_name' type
 	list($hook_type, $prepared_menu_name) = explode(':', $type);
 
@@ -197,34 +196,36 @@ function roles_menus_permissions($hook, $type, $return_value, $params) {
 
 				foreach ($role_perms as $menu => $perm_details) {
 
-					list($menu_name, $item_name) = explode('::', $menu);
+					$menu_parts = explode('::', $menu);
+					$menu_name = isset($menu_parts[0]) ? $menu_parts[0] : "";
 
 					// Check if this rule relates to the currently triggered menu and if we're in the right context for the current rule
-					if (($menu_name == $prepared_menu_name) && roles_check_context($perm_details)) {
-						// Need to act on this permission rule
+					if (roles_check_context($perm_details)) {
+						// Try to act on this permission rule
 						switch ($perm_details['rule']) {
 							case 'deny':
-								$updated_menu = roles_unregister_menu_item($updated_menu, $item_name);
+								$updated_menu = roles_unregister_menu_item_recursive($updated_menu, $menu, $prepared_menu_name);
 								break;
 							case 'extend':
-								$menu_item = roles_prepare_menu_vars($perm_details['menu_item']);
-								$menu_obj = ElggMenuItem::factory($menu_item);
-								elgg_register_menu_item($menu_name, $menu_obj);
-								$updated_menu = roles_get_menu($menu_name);
+								if ($menu_name === $prepared_menu_name) {
+									$menu_item = roles_prepare_menu_vars($perm_details['menu_item']);
+									$menu_obj = ElggMenuItem::factory($menu_item);
+									//elgg_register_menu_item($menu_name, $menu_obj);
+									//$updated_menu = roles_get_menu($menu_name);
+									$updated_menu[$menu_item['name']] = $menu_obj;
+								}
 								break;
 							case 'replace':
 								$menu_item = roles_prepare_menu_vars($perm_details['menu_item']);
 								$menu_obj = ElggMenuItem::factory($menu_item);
-								$updated_menu = roles_replace_menu_item($updated_menu, $item_name, $menu_obj);
+								$updated_menu = roles_replace_menu_item_recursive($updated_menu, $menu, $prepared_menu_name, $menu_obj);
 								break;
 							case 'allow':
 							default:
 								break;
 						}
-
 					}
 				}
-
 			}
 		}
 	}
@@ -244,6 +245,7 @@ function roles_menus_permissions($hook, $type, $return_value, $params) {
 function roles_pages_permissions($hook_name, $type, $return_value, $params) {
 	$role = roles_get_role();
 	if (elgg_instanceof($role, 'object', 'role')) {
+		// Pages
 		$role_perms = roles_get_role_permissions($role, 'pages');
 		$page_path = $return_value['handler'] . '/' . implode('/', $return_value['segments']);
 		if (is_array($role_perms) && !empty($role_perms)) {
@@ -332,7 +334,6 @@ function roles_hooks_permissions($event, $event_type, $object) {
 	return true;
 }
 
-
 /**
  *
  * Processes event permissions from the role configuration array. Triggered by the 'ready', 'system' event.
@@ -401,11 +402,16 @@ function roles_events_permissions($event, $type, $object) {
  */
 function roles_user_settings_save($hook_name, $entity_type, $return_value, $params) {
 	$role_name = get_input('role');
-	$user_id = get_input('guid');
 
-	$role_name = roles_filter_role_name($role_name);
-	$role = roles_get_role_by_name($role_name);
+	if (!$role_name) {
+		return $return_value;
+	}
+	
+	$user_id = get_input('guid');
 	$user = get_entity($user_id);
+
+	$role_name = roles_filter_role_name($role_name, $user);
+	$role = roles_get_role_by_name($role_name);
 
 	$res = roles_set_role($role, $user);
 

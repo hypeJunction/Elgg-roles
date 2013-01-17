@@ -36,7 +36,8 @@ function roles_get_role($user = null) {
 	}
 
 	// Couldn't find role for the current user, or there is no logged in user
-	return roles_get_role_by_name(roles_filter_role_name(NO_ROLE));
+	return roles_get_role_by_name(roles_filter_role_name(NO_ROLE, $user));
+
 }
 
 /**
@@ -77,15 +78,14 @@ function roles_has_role($user = null, $role_name = DEFAULT_ROLE) {
 
  * @return mixed True if the role change was successful, false if could not update user role, and null if there was no change in user role
  */
-
 function roles_set_role($role, $user = null) {
 	if (!elgg_instanceof($role, 'object', 'role')) {
-		return false;	// Couldn't set new role
+		return false; // Couldn't set new role
 	}
 
 	$user = $user ? $user : elgg_get_logged_in_user_entity();
 	if (!elgg_instanceof($user, 'user')) {
-		return false;	// Couldn't set new role
+		return false; // Couldn't set new role
 	}
 
 	$current_role = roles_get_role($user);
@@ -93,7 +93,7 @@ function roles_set_role($role, $user = null) {
 		remove_entity_relationships($user->guid, 'has_role');
 		if (($role->name != DEFAULT_ROLE) && ($role->name != ADMIN_ROLE)) {
 			if (!add_entity_relationship($user->guid, 'has_role', $role->guid)) {
-				return false;	// Couldn't set new role
+				return false; // Couldn't set new role
 			}
 		}
 		return true; // Role has been changed
@@ -107,17 +107,14 @@ function roles_set_role($role, $user = null) {
  *
  * @return mixed An array of ElggRole objects defined in the system, or false if none found
  */
-
 function roles_get_all_roles() {
 
 	$options = array(
 		'type' => 'object',
 		'subtype' => 'role',
 		'limit' => 0
-
 	);
 	return elgg_get_entities($options);
-
 }
 
 /**
@@ -131,7 +128,7 @@ function roles_get_all_roles() {
 function roles_get_all_selectable_roles() {
 
 	$dbprefix = elgg_get_config('dbprefix');
-	$reserved_role_names = "('" . implode("','", ElggRole::getReservedRoleNames()) ."')";
+	$reserved_role_names = "('" . implode("','", ElggRole::getReservedRoleNames()) . "')";
 	$options = array(
 		'type' => 'object',
 		'subtype' => 'role',
@@ -155,7 +152,6 @@ function roles_get_all_selectable_roles() {
  *
  * @return array The permission rules for the given role and permission type
  */
-
 function roles_get_role_permissions($role = null, $permission_type = null) {
 	global $PERMISSIONS_CACHE;
 
@@ -173,7 +169,6 @@ function roles_get_role_permissions($role = null, $permission_type = null) {
 	} else {
 		return $PERMISSIONS_CACHE[$role->name];
 	}
-
 }
 
 /**
@@ -182,7 +177,6 @@ function roles_get_role_permissions($role = null, $permission_type = null) {
  * @global array $PERMISSIONS_CACHE In-memory cache for role permission
  * @param ElggRole $role The role to cache permissions for
  */
-
 function roles_cache_permissions($role) {
 	global $PERMISSIONS_CACHE;
 	if (!is_array($PERMISSIONS_CACHE[$role->name])) {
@@ -194,7 +188,7 @@ function roles_cache_permissions($role) {
 	if (!empty($role->extends) && !is_array($extends)) {
 		$extends = array($extends);
 	}
-	if (is_array($extends) &&  !empty($extends)) {
+	if (is_array($extends) && !empty($extends)) {
 		foreach ($extends as $extended_role_name) {
 
 			$extended_role = roles_get_role_by_name($extended_role_name);
@@ -220,7 +214,6 @@ function roles_cache_permissions($role) {
 			$PERMISSIONS_CACHE[$role->name][$type] = $permission_rules;
 		}
 	}
-
 }
 
 /**
@@ -230,7 +223,6 @@ function roles_cache_permissions($role) {
 
  * @return mixed An ElggRole object if it could be found based on the name, false otherwise
  */
-
 function roles_get_role_by_name($role_name) {
 	$options = array(
 		'type' => 'object',
@@ -244,7 +236,6 @@ function roles_get_role_by_name($role_name) {
 	} else {
 		return false;
 	}
-
 }
 
 /**
@@ -252,14 +243,18 @@ function roles_get_role_by_name($role_name) {
 
  * @param string $role_name The name uf the user's role
  */
-function roles_filter_role_name($role_name) {
+function roles_filter_role_name($role_name, $user = null) {
 	if ($role_name !== NO_ROLE) {
 		return $role_name;
 	}
 
-	if (!elgg_is_logged_in()) {
+	if (!$user) {
+		$user = elgg_get_logged_in_user_entity();
+	}
+	
+	if (!$user) {
 		return VISITOR_ROLE;
-	} else if (elgg_is_admin_logged_in()) {
+	} else if ($user->isAdmin()) {
 		return ADMIN_ROLE;
 	} else {
 		return DEFAULT_ROLE;
@@ -275,12 +270,11 @@ function roles_filter_role_name($role_name) {
  *
  * @param array $roles_array The roles configuration array
  */
-
 function roles_create_from_config($roles_array) {
 
 	$options = array(
-			'type' => 'object',
-			'subtype' => 'role',
+		'type' => 'object',
+		'subtype' => 'role',
 	);
 	$roles = elgg_get_entities($options);
 
@@ -289,7 +283,7 @@ function roles_create_from_config($roles_array) {
 		$existing_roles[$role->name] = $role;
 	}
 
-	foreach($roles_array as $rname => $rdetails) {
+	foreach ($roles_array as $rname => $rdetails) {
 		$current_role = $existing_roles[$rname];
 		if (elgg_instanceof($current_role, 'object', 'role')) {
 			// Update existing role obejct
@@ -314,7 +308,6 @@ function roles_create_from_config($roles_array) {
 			}
 		}
 	}
-
 }
 
 /**
@@ -333,7 +326,6 @@ function roles_check_update() {
 	}
 }
 
-
 /**
  *
  * Unregisters a menu item from the passed menu array. 
@@ -350,7 +342,7 @@ function roles_unregister_menu_item($menu, $item_name) {
 	if (false !== $index = roles_find_menu_index($updated_menu, $item_name)) {
 		unset($updated_menu[$index]);
 	}
-	
+
 	return $updated_menu;
 }
 
@@ -367,11 +359,69 @@ function roles_unregister_menu_item($menu, $item_name) {
  */
 function roles_replace_menu_item($menu, $item_name, $menu_obj) {
 	$updated_menu = $menu;
-	
+
 	if (false !== $index = roles_find_menu_index($updated_menu, $item_name)) {
 		$updated_menu[$index] = $menu_obj;
 	}
-	
+
+	return $updated_menu;
+}
+
+function roles_unregister_menu_item_recursive($menu, $menu_item_name, $current_menu_name) {
+	$updated_menu = $menu;
+
+	$menu_name_parts = explode('::', $menu_item_name);
+	if ((isset($menu_name_parts[0])) && ($menu_name_parts[0] === $current_menu_name) && (count($menu_name_parts) === 1)) {
+		return array();
+	}
+
+
+	if (is_array($updated_menu) && (isset($menu_name_parts[0])) && ($menu_name_parts[0] === $current_menu_name)) {
+
+		foreach ($updated_menu as $index => $menu_obj) {
+
+			if ((count($menu_name_parts) === 2) && ($menu_name_parts[1] === $menu_obj->getName())) {
+				unset($updated_menu[$index]);
+			} else {
+				$children = $menu_obj->getChildren();
+				if (is_array($children) && !empty($children)) {
+					// This is a menu item with children
+					$current_item_name = implode("::", array_slice($menu_name_parts, 1));
+					$menu_obj->setChildren(roles_unregister_menu_item_recursive($children, $current_item_name, $menu_obj->getName()));
+				}
+			}
+		}
+	}
+
+	return $updated_menu;
+}
+
+function roles_replace_menu_item_recursive($updated_menu, $menu, $prepared_menu_name, $menu_obj) {
+	$updated_menu = $menu;
+
+	$menu_name_parts = explode('::', $menu_item_name);
+	if ((isset($menu_name_parts[0])) && ($menu_name_parts[0] === $current_menu_name) && (count($menu_name_parts) === 1)) {
+		return $menu_obj;
+	}
+
+
+	if (is_array($updated_menu) && (isset($menu_name_parts[0])) && ($menu_name_parts[0] === $current_menu_name)) {
+
+		foreach ($updated_menu as $index => $menu_obj) {
+
+			if ((count($menu_name_parts) === 2) && ($menu_name_parts[1] === $menu_obj->getName())) {
+				$updated_menu[$index] = $menu_obj;
+			} else {
+				$children = $menu_obj->getChildren();
+				if (is_array($children) && !empty($children)) {
+					// This is a menu item with children
+					$current_item_name = implode("::", array_slice($menu_name_parts, 1));
+					$menu_obj->setChildren(roles_replace_menu_item_recursive($children, $current_item_name, $menu_obj->getName(), $menu_obj));
+				}
+			}
+		}
+	}
+
 	return $updated_menu;
 }
 
@@ -388,7 +438,7 @@ function roles_find_menu_index($menu, $item_name) {
 	$found = false;
 
 	if (is_array($menu)) {
-		foreach($menu as $index => $menu_obj) {
+		foreach ($menu as $index => $menu_obj) {
 			if ($menu_obj->getName() === $item_name) {
 				$found = true;
 				break;
@@ -397,7 +447,6 @@ function roles_find_menu_index($menu, $item_name) {
 	}
 	return $found ? $index : false;
 }
-
 
 /**
  *
@@ -416,7 +465,6 @@ function roles_prepare_menu_vars($vars) {
 
 	return $prepared_vars;
 }
-
 
 /**
  *
@@ -440,6 +488,7 @@ function roles_get_menu($menu_name) {
  * @return string The updated, substituted string
  */
 function roles_replace_dynamic_paths($str) {
+	$res = $str;
 	$user = elgg_get_logged_in_user_entity();
 	if (elgg_instanceof($user, 'user')) {
 		$self_username = $user->username;
@@ -452,11 +501,11 @@ function roles_replace_dynamic_paths($str) {
 			$res = str_replace('{$self_rolename}', $role->name, $res);
 		}
 	}
-	
+
 	// Safe way to get hold of the page owner before system, ready event
 	$pageowner_guid = elgg_trigger_plugin_hook('page_owner', 'system', NULL, 0);
 	$pageowner = get_entity($pageowner_guid);
-	
+
 	if (elgg_instanceof($pageowner, 'user')) {
 		$pageowner_username = $pageowner->username;
 		$pageowner_role = roles_get_role($pageowner);
@@ -468,7 +517,6 @@ function roles_replace_dynamic_paths($str) {
 
 	return $res;
 }
-
 
 /**
  *
@@ -513,6 +561,27 @@ function roles_check_context($permission_details, $strict = false) {
 		}
 	}
 	return $result;
+}
+
+function roles_bypass_action_access_control() {
+	// Bypass the access level that the action was defined with
+	$action = get_input('action', false);
+
+	if (!$action) return true;
+
+	global $CONFIG;
+	
+	$role = roles_get_role();
+	if (elgg_instanceof($role, 'object', 'role')) {
+		$role_perms = roles_get_role_permissions($role, 'actions');
+		if (is_array($role_perms) && !empty($role_perms)) {
+			foreach ($role_perms as $rule_name => $perm_details) {
+				if (roles_path_match(roles_replace_dynamic_paths($rule_name), $action)) {
+					$CONFIG->actions[$action]['access'] = 'public';
+				}
+			}
+		}
+	}
 }
 
 /**
