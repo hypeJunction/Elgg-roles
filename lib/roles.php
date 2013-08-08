@@ -516,6 +516,41 @@ function roles_check_context($permission_details, $strict = false) {
 }
 
 /**
+ *
+ * Resets the access level that the actions were registered with so that they can be dispatched as per roles configuration
+ *
+ * @hack This allows us to grant access to actions that were registered with a highter access level than the user's default role, i.e.
+ * an action registered with access level 'admin' can be dispatched for a non-admin user given the roles config rule allows it.
+ * This is done at 'ready','system' event before {@link action()} is called as latter does not provide for any granularity by calling
+ * {@link elgg_is_admin_logged_in()}
+ *
+ * @param string $event Equals 'ready'
+ * @param string $event_type Equals 'system'
+ * @param mixed $object Not in use for this specific listener
+*/
+function roles_bypass_action_access_control($event, $type, $object) {
+
+  $action = get_input('action', false);
+
+	if (!$action)
+		return true;
+
+	global $CONFIG;
+
+	$role = roles_get_role();
+	if (elgg_instanceof($role, 'object', 'role')) {
+		$role_perms = roles_get_role_permissions($role, 'actions');
+		if (is_array($role_perms) && !empty($role_perms)) {
+			foreach ($role_perms as $rule_name => $perm_details) {
+				if (roles_path_match(roles_replace_dynamic_paths($rule_name), $action)) {
+					$CONFIG->actions[$action]['access'] = 'public';
+				}
+			}
+		}
+	}
+}
+
+/**
  * 
  * Updates roles objects to 1.0.1 version
  */

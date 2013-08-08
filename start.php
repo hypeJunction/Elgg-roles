@@ -60,6 +60,9 @@ function roles_init($event, $type, $object) {
 	// Set up roles based view management
 	elgg_register_event_handler('ready', 'system', 'roles_register_views');
 
+	// Bypass access levels for actions controlled via roles config
+	elgg_register_event_handler('ready', 'system', 'roles_bypass_action_access_control');
+
 }
 
 /**
