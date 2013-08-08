@@ -155,7 +155,9 @@ function roles_actions_permissions($hook, $type, $return_value, $params) {
 		$role_perms = roles_get_role_permissions($role, 'actions');
 		if (is_array($role_perms) && !empty($role_perms)) {
 			foreach ($role_perms as $action => $perm_details) {
-				if (roles_path_match(roles_replace_dynamic_paths($action), $type)) {
+				if (roles_path_match(roles_replace_dynamic_paths($action), $type)
+						&& roles_check_path_exceptions($perm_details, $type)) {
+
 					switch ($perm_details['rule']) {
 						case 'deny':
 							register_error(elgg_echo('roles:action:denied'));
@@ -248,7 +250,8 @@ function roles_pages_permissions($hook_name, $type, $return_value, $params) {
 		$page_path = $return_value['handler'] . '/' . implode('/', $return_value['segments']);
 		if (is_array($role_perms) && !empty($role_perms)) {
 			foreach ($role_perms as $page => $perm_details) {
-				if (roles_path_match(roles_replace_dynamic_paths($page), $page_path)) {
+				if (roles_path_match(roles_replace_dynamic_paths($page), $page_path)
+						&& roles_check_path_exceptions($perm_details, $page_path)) {
 					switch ($perm_details['rule']) {
 						case 'deny':
 							register_error(elgg_echo('roles:page:denied'));

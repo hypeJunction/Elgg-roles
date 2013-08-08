@@ -487,7 +487,7 @@ function roles_path_match($rule, $path) {
 		return preg_match($pattern, $path);
 	} else {
 		// The rule contains a simple string or a wildcard
-		return ($rule == $path || preg_match($pattern, "`^{$rule}/*$`i"));
+		return ($rule == $path || preg_match("`^{$rule}/*$`i", $path));
 	}
 }
 
@@ -513,6 +513,27 @@ function roles_check_context($permission_details, $strict = false) {
 		}
 	}
 	return $result;
+}
+
+/**
+ *
+ * Checks if a permission rule has exceptions that apply to current path
+ *
+ * @param string $permission_details The permission rule configuration
+ * @param string $path The path to match against
+ *
+ * @return True if the rule should be executed, false otherwise
+ */
+function roles_check_path_exceptions($permission_details, $path) {
+	if (is_array($permission_details['exceptions'])) {
+		foreach ($permission_details['exceptions'] as $exception) {
+			$exception = roles_replace_dynamic_paths($exception);
+			if (roles_path_match($exception, $path)) {
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 /**
