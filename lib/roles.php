@@ -486,12 +486,8 @@ function roles_path_match($rule, $path) {
 		$pattern = preg_replace('/\)$/', '', $pattern);
 		return preg_match($pattern, $path);
 	} else {
-
 		// The rule contains a simple string or a wildcard
-		$siteurl = elgg_get_site_url();
-		$normalized_path = elgg_normalize_url($path);
-		$pattern = "`^{$siteurl}{$rule}/*$`i";
-		return ($rule == $path || preg_match($pattern, $normalized_path));
+		return ($rule == $path || preg_match($pattern, "`^{$rule}/*$`i"));
 	}
 }
 
