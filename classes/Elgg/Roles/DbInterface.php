@@ -39,7 +39,8 @@ interface DbInterface {
 	 * Clears user roles
 	 *
 	 * @param \ElggUser $user User entity
+	 * @param \ElggRole $role Role to unset, defaults to all roles
 	 * @return bool
 	 */
-	public function unsetUserRole(\ElggUser $user);
+	public function unsetUserRole(\ElggUser $user, \ElggRole $role = null);
 }

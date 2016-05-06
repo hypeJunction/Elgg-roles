@@ -62,11 +62,36 @@ class Api {
 	 * @return bool True if the user belongs to the passed role, false otherwise
 	 */
 	public function hasRole(ElggUser $user, $role_name = self::DEFAULT_ROLE) {
-		return $this->getRole($user)->name == $role_name;
+		if ($role_name instanceof ElggRole) {
+			$role_name = $role_name->name;
+		}
+		return $this->getRole($user)->matches($role_name);
+	}
+
+	/**
+	 * Add a role to a particular user
+	 * 
+	 * @param ElggUser $user User entity
+	 * @param ElggRole $role Role entity
+	 * @return bool
+	 */
+	public function addRole(ElggUser $user, ElggRole $role) {
+		if ($this->hasRole($user, $role->name)) {
+			// There was no change necessary, old and new role are the same
+			return;
+		}
+
+		if ($role->isReservedRole()) {
+			// Changed to reserved role which is resolved without relationships
+			return true;
+		}
+
+		return $this->db->setUserRole($user, $role);
 	}
 
 	/**
 	 * Assigns a role to a particular user
+	 * Removes any previuosly set roles
 	 *
 	 * @param ElggUser $user The user the role needs to be assigned to
 	 * @param ElggRole $role The role to be assigned
@@ -74,8 +99,7 @@ class Api {
 	 */
 	public function setRole(ElggUser $user, ElggRole $role) {
 
-		$current_role = $this->getRole($user);
-		if ($role->name == $current_role->name) {
+		if ($this->hasRole($user, $role->name)) {
 			// There was no change necessary, old and new role are the same
 			return;
 		}
@@ -96,10 +120,11 @@ class Api {
 	 * Clear user roles
 	 * 
 	 * @param ElggUser $user User entity
+	 * @param ElggRole $role Role to unset
 	 * @return bool
 	 */
-	public function unsetRole(ElggUser $user) {
-		return $this->db->unsetUserRole($user);
+	public function unsetRole(ElggUser $user, ElggRole $role = null) {
+		return $this->db->unsetUserRole($user, $role);
 	}
 
 	/**

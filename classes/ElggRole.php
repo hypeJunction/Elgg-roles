@@ -174,4 +174,13 @@ class ElggRole extends ElggObject {
 		return $users;
 	}
 
+	/**
+	 * Check if this role matches a role name
+	 * 
+	 * @param string $role_name Role name to match against
+	 * @return bool
+	 */
+	public function matches($role_name) {
+		return $this->name == $role_name;
+	}
 }

@@ -20,6 +20,11 @@
 		<type>elgg_release</type>
 		<version>1.11</version>
 	</requires>
+
+	<provides>
+		<type>plugin</type>
+		<name>roles_multirole</name>
+	</provides>
 	
 	<activate_on_install>false</activate_on_install>
 	

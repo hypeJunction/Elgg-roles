@@ -43,10 +43,22 @@ class Db implements \Elgg\Roles\DbInterface {
 			'subtype' => 'role',
 			'relationship' => 'has_role',
 			'relationship_guid' => $user->guid,
-			'limit' => 1,
+			'limit' => 0,
+			'selects' => [
+				'r.time_created AS relationship_time',
+			],
+			'order_by' => 'r.time_created ASC',
 		);
 		$roles = elgg_get_entities_from_relationship($options);
-		return $roles ? $roles[0] : false;
+		if (!$roles) {
+			return false;
+		} else if (count($roles) == 1) {
+			return $roles[0];
+		}
+
+		$role = new \ElggCompositeRole();
+		$role->setParts($roles);
+		return $role;
 	}
 
 	/**
@@ -59,8 +71,12 @@ class Db implements \Elgg\Roles\DbInterface {
 	/**
 	 * {@inheritdoc}
 	 */
-	public function unsetUserRole(\ElggUser $user) {
-		return (bool) remove_entity_relationships($user->guid, 'has_role');
+	public function unsetUserRole(\ElggUser $user, \ElggRole $role = null) {
+		if (!$role) {
+			return (bool) remove_entity_relationships($user->guid, 'has_role');
+		}
+
+		return (bool) remove_entity_relationship($user->guid, 'has_role', $role->guid);
 	}
 
 }
