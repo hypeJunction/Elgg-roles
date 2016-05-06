@@ -60,7 +60,23 @@ class Db implements \Elgg\Roles\DbInterface {
 	 * {@inheritdoc}
 	 */
 	public function unsetUserRole(\ElggUser $user) {
-		return (bool) remove_entity_relationships($user->guid, 'has_role');
+		$roles = new \ElggBatch('elgg_get_entities_from_relationship', array(
+			'types' => 'object',
+			'subtypes' => 'role',
+			'relationship' => 'has_role',
+			'relationship_guid' => $user->guid,
+			'inverse_relationship' => false,
+			'limit' => 0,
+		));
+		$roles->setIncrementOffset(false);
+		$error = false;
+		foreach ($roles as $role) {
+			if (!(bool) remove_entity_relationship($user->guid, 'has_role', $role->guid)) {
+				$error = true;
+			}
+		}
+
+		return !$error;
 	}
 
 }
