@@ -36,6 +36,21 @@ function roles_has_role($user = null, $role_name = DEFAULT_ROLE) {
 }
 
 /**
+ * Add a role to a particular user
+ *
+ * @param ElggRole $role Role entity
+ * @param ElggUser $user User entity
+ * @return bool
+ */
+function roles_add_role($role, $user = null) {
+	$user = isset($user) ? $user : elgg_get_logged_in_user_entity();
+	if ($user instanceof ElggUser && $role instanceof ElggRole) {
+		return roles()->addRole($user, $role);
+	}
+	return false;
+}
+
+/**
  * Assigns a role to a particular user
  *
  * @param ElggRole $role The role to be assigned
@@ -48,6 +63,20 @@ function roles_set_role($role, $user = null) {
 		return roles()->setRole($user, $role);
 	}
 	return false;
+}
+
+/**
+ * Clear user roles
+ *
+ * @param ElggRole $role Role to unset (removes all roles if empty)
+ * @param ElggUser $user User entity (defaults to logged in user)
+ * @return bool
+ */
+function roles_unset_role($role = null, $user = null) {
+	$user = isset($user) ? $user : elgg_get_logged_in_user_entity();
+	if ($user instanceof ElggUser && $role instanceof ElggRole) {
+		return roles()->unsetRole($user, $role);
+	}
 }
 
 /**
@@ -142,7 +171,7 @@ function roles_check_update() {
  * @deprecated 2.0
  */
 function roles_unregister_menu_item() {
-	
+
 }
 
 /**
@@ -156,21 +185,21 @@ function roles_replace_menu_item() {
  * @deprecated 2.0
  */
 function roles_unregister_menu_item_recursive() {
-	
+
 }
 
 /**
  * @deprecated 2.0
  */
 function roles_replace_menu_item_recursive() {
-	
+
 }
 
 /**
  * @deprecated 2.0
  */
 function roles_find_menu_index() {
-	
+
 }
 
 /**
@@ -187,7 +216,7 @@ function roles_prepare_menu_vars($vars) {
  * @deprecated 2.0
  */
 function roles_get_menu($menu_name) {
-	
+
 }
 
 /**
@@ -230,8 +259,8 @@ function roles_check_context($permission_details, $strict = false) {
  */
 function roles_update_100_to_101() {
 
-	// Remove all 'roles_hash' values from plugin settings
-	// This will force new storage of the configuration array hash
+// Remove all 'roles_hash' values from plugin settings
+// This will force new storage of the configuration array hash
 	$dbprefix = elgg_get_config('dbprefix');
 	$statement = "DELETE from {$dbprefix}private_settings WHERE name = 'roles_hash'";
 	return delete_data($statement);

@@ -120,7 +120,7 @@ class Api {
 	 * Clear user roles
 	 * 
 	 * @param ElggUser $user User entity
-	 * @param ElggRole $role Role to unset
+	 * @param ElggRole $role Role to unset (removes all roles if empty)
 	 * @return bool
 	 */
 	public function unsetRole(ElggUser $user, ElggRole $role = null) {
