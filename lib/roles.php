@@ -74,9 +74,10 @@ function roles_set_role($role, $user = null) {
  */
 function roles_unset_role($role = null, $user = null) {
 	$user = isset($user) ? $user : elgg_get_logged_in_user_entity();
-	if ($user instanceof ElggUser && $role instanceof ElggRole) {
+	if ($user instanceof ElggUser && (!isset($role) || $role instanceof ElggRole)) {
 		return roles()->unsetRole($user, $role);
 	}
+	return false;
 }
 
 /**
